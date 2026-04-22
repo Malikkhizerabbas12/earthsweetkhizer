@@ -425,6 +425,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
       <div class="form-group"><label>Featured?</label>
         <select id="p-featured"><option value="0">No</option><option value="1">Yes</option></select>
       </div>
+      <div class="form-group"><label>Status</label>
+        <select id="p-active"><option value="1">Active</option><option value="0">Inactive</option></select>
+      </div>
     </div>
     <div class="form-group" style="margin-top:8px"><label>Description (English)</label><textarea id="p-desc-en" rows="2" placeholder="Product description..."></textarea></div>
     <div class="form-group"><label>Description (Urdu)</label><textarea id="p-desc-ur" rows="2" placeholder="مصنوعہ کی تفصیل..."></textarea></div>
@@ -769,6 +772,7 @@ function editProduct(id) {
   document.getElementById('p-desc-en').value  = p.description_en||'';
   document.getElementById('p-desc-ur').value  = p.description_ur||'';
   document.getElementById('p-featured').value = p.is_featured ? '1' : '0';
+  document.getElementById('p-active').value = p.is_active ? '1' : '0';
   document.getElementById('p-unit').value     = p.unit||'kg';
   // Show existing image
   if (p.image_url) {
@@ -800,7 +804,7 @@ async function saveProduct() {
     is_featured: document.getElementById('p-featured').value,
     unit:    document.getElementById('p-unit').value,
     category_id: document.getElementById('p-cat').value,
-    is_active: true,
+    is_active: document.getElementById('p-active').value === '1',
   };
   try {
     const url    = id ? API+'/admin/products/'+id : API+'/admin/products';
