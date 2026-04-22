@@ -129,35 +129,6 @@ router.post('/auth/register', [
   } catch (e) { console.error('LOGIN ERROR:', e); err(res, e.message, 500); }
 });
 
-// POST /api/auth/google — Firebase Google login → save to DB
-router.post('/auth/google', async (req, res) => {
-  try {
-    const { email, full_name } = req.body;
-    if (!email) return err(res, 'Email required', 400);
-
-    // Check if user already exists
-    const [rows] = await db.execute(
-      'SELECT id, full_name, phone, city, is_active FROM customers WHERE email=?', [email]);
-
-    let customer;
-    if (rows.length) {
-      // Already exists — just login
-      customer = rows[0];
-      if (customer.is_active === 0) return err(res, 'Account is deactivated', 401);
-    } else {
-      // New Google user — create account
-      const [result] = await db.execute(
-        'INSERT INTO customers (full_name, email, is_active) VALUES (?,?,1)',
-        [full_name || email.split('@')[0], email]
-      );
-      customer = { id: result.insertId, full_name: full_name || email.split('@')[0], email, phone: null, city: null };
-    }
-
-    const token = jwt.sign({ id: customer.id, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-    ok(res, { token, customer }, 'Google login successful');
-  } catch (e) { console.error('GOOGLE AUTH ERROR:', e); err(res, e.message, 500); }
-});
-
 // POST /api/auth/login
 router.post('/auth/login', [
   body('phone').trim().notEmpty(),
@@ -179,6 +150,37 @@ router.post('/auth/login', [
     const { password: _, ...customer } = rows[0];
     ok(res, { token, customer }, 'Login successful');
   } catch (e) { console.error('LOGIN ERROR:', e); err(res, e.message, 500); }
+});
+
+// POST /api/auth/google — Firebase Google/Facebook login
+router.post('/auth/google', async (req, res) => {
+  try {
+    const { email, full_name } = req.body;
+    if (!email) return err(res, 'Email required', 400);
+
+    // Check if customer already exists
+    const [exists] = await db.execute('SELECT id, full_name, phone, city, is_active FROM customers WHERE email=?', [email]);
+
+    let customer;
+    if (exists.length) {
+      // Existing user — update name if needed
+      customer = exists[0];
+      if (!customer.full_name && full_name) {
+        await db.execute('UPDATE customers SET full_name=? WHERE id=?', [full_name, customer.id]);
+        customer.full_name = full_name;
+      }
+    } else {
+      // New user — create account
+      const [result] = await db.execute(
+        'INSERT INTO customers (full_name, email, phone, password, is_active) VALUES (?,?,?,?,1)',
+        [full_name || email.split('@')[0], email, null, 'firebase_auth']
+      );
+      customer = { id: result.insertId, full_name: full_name || email.split('@')[0], email, phone: null, city: null };
+    }
+
+    const token = jwt.sign({ id: customer.id, role: 'customer' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+    ok(res, { token, customer }, 'Google login successful');
+  } catch (e) { console.error('GOOGLE AUTH ERROR:', e); err(res, e.message, 500); }
 });
 
 // GET /api/auth/me - Get logged in customer info
