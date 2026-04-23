@@ -1414,6 +1414,9 @@ function loadProducts(filter) {
 }
 
 function renderProducts(products) {
+  // ✅ FIX 1: Sirf active products dikhao
+  products = products.filter(function(p){ return p.is_active; });
+
   var grid = document.getElementById('productsGrid');
   if (!products.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6b7280">No products found.</p>'; return; }
   var html = '';
@@ -1427,9 +1430,12 @@ function renderProducts(products) {
     var desc = p.description_en || '';
     var price = parseFloat(p.price).toLocaleString();
     html += '<div class="product-card">';
+
+    // ✅ FIX 2: image_url direct use karo (Firebase Storage ya Railway dono ke liye kaam karega)
     var imgHtml = p.image_url
-      ? '<img src="' + (window.location.port==='5000'?'':API_URL.replace('/api','')) + p.image_url + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'" /><span style="font-size:72px;display:none">' + emoji + '</span>'
+      ? '<img src="' + p.image_url + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'" /><span style="font-size:72px;display:none">' + emoji + '</span>'
       : '<span style="font-size:72px">' + emoji + '</span>';
+
     html += '<div class="pc-img">' + imgHtml + badge + '</div>';
     html += '<div class="pc-body">';
     html += '<div class="pc-cat">' + catEn + ' &bull; ' + catUr + '</div>';
@@ -1467,7 +1473,6 @@ function renderProducts(products) {
     }
   }, 50);
 }
-
 function filterProducts(cat) {
   document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
   event.target.classList.add('active');
